@@ -287,6 +287,8 @@ public class Database {
 
 
     //print contents of dbfile
+	//TODO FIX THE WAY THIS PRINTS -- SHOULD PRINT THE NAME OF PEOPLE WHO CHECKED OUT WITH AUTHOR TITLE
+	//TODO IN A SEPERATE PRINT BELOW THE MAIN, PRINT EVERYONE WHO HAS NOT CHECKED OUT A BOOK
     public static void printTableContents(Connection database, Scanner in) {
         try {
             Statement stmt = database.createStatement();
