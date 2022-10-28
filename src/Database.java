@@ -119,13 +119,21 @@ public class Database {
             }
             sqlCreate += variables.get(variables.size()-1);
 
-            System.out.println("Specify primary key? (Y / N)");
+            System.out.println("Specify primary key(s)? (Y / N)");
             String option = in.nextLine();
             // if we have a primary key add the , PRIMARY KEY (var))
             switch(option.toUpperCase()){
                 case "Y":
-                    System.out.println("Enter the variable would you like to set as the primary key:");
-                    String key = in.nextLine();
+                    System.out.println("Specify number of primary keys");
+                    int numKeys = in.nextInt();
+                    in.nextLine();
+                    String key = "";
+                    for(int i = 0; i < numKeys; i++) {
+                        System.out.println("Enter the variable would you like to set as the primary key:");
+                        key += in.nextLine() + ", ";
+
+                    }
+                    key = key.substring(0, key.length()-2);
                     sqlCreate += ", PRIMARY KEY ( " + key + " ))";
                     break;
                 case "N":
@@ -148,7 +156,6 @@ public class Database {
     private static boolean tableExistsSQL(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData meta = connection.getMetaData();
         ResultSet resultSet = meta.getTables(null, null, tableName, new String[] {"TABLE"});
-
         return resultSet.next();
     }
 
@@ -178,15 +185,8 @@ public class Database {
         }
     }
 
-
-    private static void dump() throws IOException {
-
-    }//end dump
-
-
     //insert into an existing table
     public static void insertEntry(Connection database, Scanner in) throws IOException {
-        boolean keepReading = true;
         String sqlInsert = "";
         try {
             Statement stmt = database.createStatement();
@@ -331,7 +331,6 @@ public class Database {
             e.printStackTrace();
             return;
         }
-        System.out.println("Deleted row from SQL database");
         return;
     }//end printFile
 
@@ -344,10 +343,68 @@ public class Database {
     private static void listUsers(Connection database, Scanner in) {
     }
 
+    private static void includeNewEntry(Connection database, Scanner in, String tableName) {
+        boolean keepReading = true;
+        String sqlInsert = "";
+        try {
+            while(keepReading) {
+                sqlInsert = "";
+                int totalLengthOfVars = 0;
+                Statement stmt = database.createStatement();
+                System.out.println();
+                if (!tableExistsSQL(database, tableName)) {
+                    System.err.println("Error! cannot add to table " + tableName + " as it does not exist!");
+                    return;
+                }
+                ArrayList<String> variables = new ArrayList<String>();
+                //take in and store column info
+                //System.out.println("Reading variables - to continue, simply hit enter on all three fields");
+                DatabaseMetaData metadata = database.getMetaData();
+                ResultSet resultSet = metadata.getColumns(null, null, tableName, null);
+                String varNames = "(";
+                while (resultSet.next()) {
+                    String name = resultSet.getString("COLUMN_NAME");
+                    String type = resultSet.getString("TYPE_NAME");
+                    int size = resultSet.getInt("COLUMN_SIZE");
+                    System.out.println("ENTER VALUE FOR " + name + " " + type + "(" + size + "):");
+                    String value = in.nextLine();
+                    if ((type == "VARCHAR" || type == "CHAR") && value.length() != 0) {
+                        value = "\"" + value + "\"";
+                    }
+                    variables.add(value);
+                    totalLengthOfVars += value.length();
+                    varNames += name + ", ";
+                }
+                if (totalLengthOfVars == 0)
+                    return;
+                //build string for create
+                sqlInsert += "INSERT INTO " + tableName + " " + varNames.substring(0, varNames.length() - 2) + ") VALUES (";
+                for (int i = 0; i < variables.size() - 1; i++) {
+                    sqlInsert += variables.get(i) + ", ";
+                }
+                sqlInsert += variables.get(variables.size() - 1) + ")";
+
+                //send create statement to the DB
+                stmt.executeUpdate(sqlInsert);
+                System.out.println("Wrote entry to SQL database");
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR - error inserting into table");
+            System.err.println(sqlInsert);
+            e.printStackTrace();
+            return;
+        }
+        return;
+    }
+
     private static void includeNewUser(Connection database, Scanner in) {
+        includeNewEntry(database, in, "people");
+        return;
     }
 
     private static void includeNewBook(Connection database, Scanner in) {
+        includeNewEntry(database, in, "books");
+        return;
     }
 
 }//end Main class
